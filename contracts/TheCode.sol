@@ -2,7 +2,7 @@ pragma solidity ^0.4.13;
 
 contract tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData); }
 
-contract MyToken {
+contract TheCode {
     /* Public variables of the token */
     string public name;
     string public symbol;
@@ -20,7 +20,7 @@ contract MyToken {
     event Burn(address indexed from, uint256 value);
 
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function MyToken(
+    function TheCode(
         uint256 initialSupply,
         string tokenName,
         uint8 decimalUnits,
