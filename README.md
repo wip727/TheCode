@@ -1,6 +1,4 @@
-# Project Name
-
-The Code 
+# The Code
 		
 A smart contract for creating and using tokens on Ethereum Network
 
