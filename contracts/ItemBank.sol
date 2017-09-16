@@ -55,7 +55,7 @@ contract ItemBank {
 		borrowTime[item] = itemTime;
 		depositValue[item] = itemValue;
 		borrowChargeRate[item] = itemRate;
-		//Log events
+		// Log the events
 		ItemRegistered(item, itemOwner);
 		ItemPublished(item, itemTime, itemValue, itemRate);
 		return true;
@@ -68,15 +68,50 @@ contract ItemBank {
 	function borrowItem(address tokenContract, address item) returns (bool success) {
 		// TODO: add state check for item 
 		// item must be registered and published and unborrowed
+
 		TheCode ledger = TheCode(tokenContract);
-		ledger.approve(owner[item], depositValue[item]);
-		borrower[item] = msg.sender;
-		startTime[item] = now;
-		//Log event
-		ItemBorrowed(item, msg.sender, startTime[item]);
-		return true;
-	} 
+		
+		// uint256 deposit = depositValue[item];
+		
+		//// Confirm the deposit process is initiated
+		// require(deposit <= ledger.allowance(tx.origin, this));
+		//// Execute the deposit
+		// ledger.transferFrom(tx.origin, this, deposit);
+		
+		// TODO: deposit status check 
+		if (true) {
+			// ledger.approve(owner[item], deposit);
+			borrower[item] = tx.origin;
+			startTime[item] = now;
+			// Log the event
+			ItemBorrowed(item, tx.origin, startTime[item]);
+			return true;
+		}
+	}
 
+	/* Item returning start */
+	// Input arguments:
+	// tokenContract, contract address of the token for using payment methods
+	// item, address of the item
+	function returnItem(address tokenContract, address item) returns (bool success) {
+		TheCode ledger = TheCode(tokenContract);
+		uint256 deposit = depositValue[item];
+		uint256 timeElapsed;
+		uint256 totalCost;
 
+		// Stop the clock and calculate the cost 
+        timeElapsed = now - startTime[item];
+        totalCost = timeElapsed * borrowChargeRate[item];
 
+        if (totalCost > deposit || timeElapsed > borrowTime[item]) {
+        	ledger.transfer(owner[item], deposit);
+        } else {
+        	ledger.transfer(owner[item], totalCost);
+        	ledger.transfer(borrower[item], deposit - totalCost);
+        }
+
+        // TODO: reset a bunch of states
+        delete borrower[item];
+        return true;
+    }
 }
