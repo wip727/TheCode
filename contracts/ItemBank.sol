@@ -8,6 +8,8 @@ contract ItemBank {
 	/* Public and private variables of the contract */
 	address private admin;
 
+	enum State {Unregistered, Registered, Borrowed}
+
 	/* Creates mappings of items and owners */
 	mapping (address => address) public owner;
 	/* Creates mappings of items and borrower */
@@ -20,6 +22,8 @@ contract ItemBank {
 	mapping (address => uint256) public borrowChargeRate;
 	/* Creates mappings of items and borrowing start time */
 	mapping (address => uint256) public startTime;
+	/* Creates mappings of items and state */
+	mapping (address => State) public state;
 
 	/* Events to be logged on state change */
 	event ItemRegistered(address indexed item, address indexed owner);
@@ -37,6 +41,11 @@ contract ItemBank {
 		_;
 	}
 
+	modifier inState(State _state, address item) {
+		require(state[item] == _state);
+		_;
+	}
+
 	/* Item registration, only can be called by admin */
 	// Input arguments:
 	// item, address of the item
@@ -50,11 +59,12 @@ contract ItemBank {
 		uint256 itemValue,
 		uint256 itemRate 
 		)
-	onlyBy(admin) returns (bool success) {
+	onlyBy(admin) inState(State.Unregistered, item) returns (bool success) {
 		owner[item] = itemOwner;
 		borrowTime[item] = itemTime;
 		depositValue[item] = itemValue;
 		borrowChargeRate[item] = itemRate;
+		state[item] = State.Registered;
 		// Log the events
 		ItemRegistered(item, itemOwner);
 		ItemPublished(item, itemTime, itemValue, itemRate);
@@ -65,24 +75,26 @@ contract ItemBank {
 	// Input arguments:
 	// tokenContract, contract address of the token for using payment methods
 	// item, address of the item
-	function borrowItem(address tokenContract, address item) returns (bool success) {
+	function borrowItem(address tokenContract, address item) 
+	inState(State.Registered, item) returns (bool success) {
 		// TODO: add state check for item 
 		// item must be registered and published and unborrowed
 
 		TheCode ledger = TheCode(tokenContract);
 		
-		// uint256 deposit = depositValue[item];
+		uint256 deposit = depositValue[item];
 		
-		//// Confirm the deposit process is initiated
-		// require(deposit <= ledger.allowance(tx.origin, this));
-		//// Execute the deposit
-		// ledger.transferFrom(tx.origin, this, deposit);
+		// Confirm the deposit process is initiated
+		require(deposit <= ledger.allowance(tx.origin, this));
+		// Execute the deposit
+		success = ledger.transferFrom(tx.origin, this, deposit);
 		
-		// TODO: deposit status check 
-		if (true) {
+		// Deposit status check 
+		if (success) {
 			// ledger.approve(owner[item], deposit);
 			borrower[item] = tx.origin;
 			startTime[item] = now;
+			state[item] = State.Borrowed;
 			// Log the event
 			ItemBorrowed(item, tx.origin, startTime[item]);
 			return true;
@@ -93,7 +105,8 @@ contract ItemBank {
 	// Input arguments:
 	// tokenContract, contract address of the token for using payment methods
 	// item, address of the item
-	function returnItem(address tokenContract, address item) returns (bool success) {
+	function returnItem(address tokenContract, address item) 
+	inState(State.Borrowed, item) returns (bool success) {
 		TheCode ledger = TheCode(tokenContract);
 		uint256 deposit = depositValue[item];
 		uint256 timeElapsed;
@@ -110,8 +123,10 @@ contract ItemBank {
         	ledger.transfer(borrower[item], deposit - totalCost);
         }
 
-        // TODO: reset a bunch of states
+        // Reset states
+        state[item] = State.Registered;
         delete borrower[item];
+        delete startTime[item];     
         return true;
     }
 }

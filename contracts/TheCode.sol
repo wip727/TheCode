@@ -36,8 +36,8 @@ contract TheCode {
     /* Internal transfer, only can be called by this contract */
     function _transfer(address _from, address _to, uint _value) internal {
         require (_to != 0x0);                               // Prevent transfer to 0x0 address. Use burn() instead
-        require (balanceOf[_from] > _value);                // Check if the sender has enough
-        require (balanceOf[_to] + _value > balanceOf[_to]); // Check for overflows
+        require (balanceOf[_from] >= _value);                // Check if the sender has enough
+        require (balanceOf[_to] + _value >= balanceOf[_to]); // Check for overflows
         balanceOf[_from] -= _value;                         // Subtract from the sender
         balanceOf[_to] += _value;                            // Add the same to the recipient
         Transfer(_from, _to, _value);
@@ -55,7 +55,7 @@ contract TheCode {
     /// @param _to The address of the recipient
     /// @param _value the amount to send
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        require (_value < allowance[_from][msg.sender]);     // Check allowance
+        require (_value <= allowance[_from][msg.sender]);     // Check allowance
         allowance[_from][msg.sender] -= _value;
         _transfer(_from, _to, _value);
         return true;
@@ -86,7 +86,7 @@ contract TheCode {
     /// @notice Remove `_value` tokens from the system irreversibly
     /// @param _value the amount of money to burn
     function burn(uint256 _value) returns (bool success) {
-        require (balanceOf[msg.sender] > _value);            // Check if the sender has enough
+        require (balanceOf[msg.sender] >= _value);            // Check if the sender has enough
         balanceOf[msg.sender] -= _value;                      // Subtract from the sender
         totalSupply -= _value;                                // Updates totalSupply
         Burn(msg.sender, _value);
